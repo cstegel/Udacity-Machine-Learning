@@ -107,3 +107,60 @@ Each feature must help more than the arbitrary penalty otherwise that coefficien
 minimize SumSqErr + lambda * |B|
 lambda: parameter
 B: coeficients of regression
+
+### outliers
+Looking for overly "important" features with regularization can sometimes help you find features that are outliers and should not be included.
+
+# 12 - PCA: Principle Component Analysis
+
+translates and rotates the axis of the features to better align with the dimensions of the data.
+
+Ex: diagonal line of data, rotate so diagonal line is now a horizontal line along the x-axis, centre of co-ord system is at centre of diagonal line.  Other axes get orthogonal directions.
+
+## Measureable vs Latent Featrures
+
+**Measureable:** sq footage, # of rooms, school ranking, neighborhood safety
+**Latent:** size, neighborhood
+
+How to reduce 4 measurable features to 2 so we get to heart of the info?
+  - see selectors like earlier
+    - not always best solution
+
+## Principle Components
+
+Preserve information by making a **composite** feature from many features.  This is a **principle component**.
+
+Ex: graph # of rooms and sq footage together, determine a function that approximates their relation as a projection (like a diagonal line that each point can be projected a certain distance to be on the line)
+
+### how to determine
+**principal component** is the direction that has the **largest variance** (spread).  This minimizes information loss since no other directions have higher variance.
+
+## PCA as a General Algorithm for Feature Transformation
+**Useful for unsupervised learning**
+
+Feed all 4 features into PCA, output is **principal components** ranked by "relative power" of the **principal components**.
+
+Ex: [sq footage, #rooms, school rating, safety rating] becomes
+
+1:[school rating, safety rating], 2:[sq footage, #rooms]
+
+## Summary of PCA
+  - systemized way to transform input features into **principal components**
+  - use **PC**s as new features
+  - **PC**s are directions that maximize variance (minimize information loss) when you project/compress down onto them
+  - more variance along a **PC**, higher that **PC** is ranked
+    - 1st PC, most info, 2nd PC, 2nd most info, etc
+  - **PC**s are orthogonal (do not overlap, they are "independent" features)
+  - max # of **PC**s is # of input features
+
+## When to use PCA
+  - find latent features driving the data
+  - dimensionality reduction
+    - visualize high-dimensional data
+    - reduce noise
+    - improves performance of other algorithms
+
+## PCA for Facial Recognition (Eigenfaces)
+Why is it well suited?
+  - pictures have high dimensionality
+  - faces have patterns that can be captured in smaller # of dimensions
