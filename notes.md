@@ -164,3 +164,21 @@ Ex: [sq footage, #rooms, school rating, safety rating] becomes
 Why is it well suited?
   - pictures have high dimensionality
   - faces have patterns that can be captured in smaller # of dimensions
+
+# 13 - Validation
+
+**Train/Test** split of data is important!!!
+to do it easily see sklearn.cross_validation
+
+## k-fold Cross Validation
+divide data into _k_ sections.  Train on k-1 sections and test on 1.  Accuracy is
+average score over all possible k-1 training section combinations.
+  - accuracy is average of k-1 tests! (much better than 1!)
+
+## Cross-Validation for parameter tuning
+**Idea:** Given a range of possible classfier/regression parameters, find the
+best combination of parameters.
+  - try every combination of parameters, test the accuracy of the model
+  - return parameters/model that had highest accuracy
+  - built in for sklearn: sklearn.grid_search.GridSearchCV
+
