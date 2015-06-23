@@ -209,3 +209,68 @@ Count them up into the matrix similar to below.
   - true +ves / (true +ves + false -ves)
 **Precision:** % of time we guess A and are right
   - true +ves / (total +ves)
+
+# 15 - Summary
+  - Dataset/Question
+    - Do I have enough data?
+    - can I define a question?
+    - enough/right features to answer question?
+  - Features
+    - Scaling
+      - mean subtraction
+      - minmax scaler (normalize min as 0 max as 1)
+      - standard scalar
+    - creation
+      - combine existing features to uncover latent features (PCA)
+    - selection
+      - KBest
+      - percentile best
+      - recursive feature elim
+    - transforms
+      - PCA
+      - ICA
+    - representation
+      - text vectorization
+      - discretization
+    - exploration
+      - inspect for correlations
+      - outlier removal
+  - Algorithms
+    - pick an algorithm
+      - Labeled? =>  supervised
+        - non-ordered/discrete => classifier
+          - decision Trees
+          - naive bayes
+          - SVM
+          - ensembles
+          - k nearest neighbors
+          - lambda
+          - logistic regression
+        - ordered or continuous output => regression
+          - Linear regression
+          - Lasso regression
+          - decision tree regression
+          - SV regression
+      - not labeled? => unsupervised
+        - k-means clustering
+        - spectral clustering
+        - PCA
+        - mixture models/EM algorithm
+        - outlier detection
+    - tune your algorithm
+      - parameters of alg
+      - visual inspection
+      - performance on test data
+      - auto-tune (GridSearchCV)
+  - Evaluation
+    - validate
+      - train/test split
+      - k-fold testing
+      - visualize
+    - pick metrics
+      - SSE/r^2
+      - precision
+      - recall
+      - F1 score (precision and recall together)
+      - ROC curve
+      - custom bias/variance
