@@ -38,7 +38,7 @@ point is 1.
 x' = (x-x_{min}) / (x_{max}-x_{min})
 ```
 
-outliers greatly affect data that has been scaled
+outliers greatly affect data that has been min/max scaled
   - ex: 100, 250, 900, 1000000 => 0, ~0, ~0, 1
 
 # 10 - Text Learning
@@ -207,6 +207,7 @@ Count them up into the matrix similar to below.
 
 **Recall:** % of time we correctly identify an object as A, given that it is A
   - true +ves / (true +ves + false -ves)
+
 **Precision:** % of time we guess A and are right
   - true +ves / (total +ves)
 
