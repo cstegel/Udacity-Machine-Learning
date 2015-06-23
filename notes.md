@@ -182,3 +182,30 @@ best combination of parameters.
   - return parameters/model that had highest accuracy
   - built in for sklearn: sklearn.grid_search.GridSearchCV
 
+# 14 - Evaluation Metrics
+
+## Accuracy
+Simple metric.  % of items in a class labeled correctly.
+
+Not ideal evaluation for:
+  - skewed classes (low # of data points)
+  - focusing on reducing false positives (guess person is innocent when not too sure)
+    - possible to have bad accuracy but good (low) false positives
+  - focusing on reducing false negatives (guess person is guilt when not too sure)
+    - same as above
+
+## Confusion Matrix
+
+Look at graph of points showing actual and predicted labels.
+Count them up into the matrix similar to below.
+
+||        | Actual class |
+|---------|-----|-----|-----|
+|         |     | +ve | -ve |
+|Predicted| +ve |  2  |  0  |
+|Class    | -ve |  1  |  5  |
+
+**Recall:** % of time we correctly identify an object as A, given that it is A
+  - true +ves / (true +ves + false -ves)
+**Precision:** % of time we guess A and are right
+  - true +ves / (total +ves)
