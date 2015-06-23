@@ -199,7 +199,7 @@ Not ideal evaluation for:
 Look at graph of points showing actual and predicted labels.
 Count them up into the matrix similar to below.
 
-||        | Actual class |
+||        | Actual class ||
 |---------|-----|-----|-----|
 |         |     | +ve | -ve |
 |Predicted| +ve |  2  |  0  |
