@@ -2,6 +2,7 @@
 
 import sys
 import pickle
+import os.path
 from pprint import pprint
 sys.path.append("../tools/")
 
@@ -11,6 +12,8 @@ from tester import test_classifier, dump_classifier_and_data
 from sklearn.metrics import precision_score
 from sklearn.metrics import recall_score
 from sklearn.cross_validation import StratifiedShuffleSplit
+
+from operator import itemgetter
 
 # classifiers in use
 from sklearn.naive_bayes import GaussianNB, MultinomialNB, BernoulliNB
@@ -66,7 +69,8 @@ available_features = [
 ]
 
 # method adapted from tester.py that the course instructor/evaluator will use
-def get_classifier_scores(clf, dataset, feature_list, folds = 1000):
+def get_classifier_scores(clf_class, clf_kwargs, dataset, feature_list, folds = 1000):
+    clf = clf_class(**clf_kwargs)
     data = featureFormat(dataset, feature_list, sort_keys = True)
     labels, features = targetFeatureSplit(data)
     cv = StratifiedShuffleSplit(labels, folds, random_state = 42)
@@ -74,6 +78,12 @@ def get_classifier_scores(clf, dataset, feature_list, folds = 1000):
     false_negatives = 0
     true_positives = 0
     false_positives = 0
+    
+    stats = {
+      'classifier': clf_class,
+      'clf_kwargs': clf_kwargs,
+    }
+    
     for train_idx, test_idx in cv: 
         features_train = []
         features_test  = []
@@ -87,12 +97,13 @@ def get_classifier_scores(clf, dataset, feature_list, folds = 1000):
             labels_test.append( labels[jj] )
         
         ### fit the classifier using training set, and test on test set
-        clf.fit(features_train, labels_train)
         
         try:
+            clf.fit(features_train, labels_train)
             predictions = clf.predict(features_test)
         except Exception as e:
-            return {'classifier': clf, 'exception': e}
+            stats['exception'] = e
+            return stats
             
         for prediction, truth in zip(predictions, labels_test):
             if prediction == 0 and truth == 0:
@@ -103,7 +114,8 @@ def get_classifier_scores(clf, dataset, feature_list, folds = 1000):
                 false_positives += 1
             else:
                 true_positives += 1
-    stats = {'classifier': clf}
+                
+    
     try:
         stats['total_predictions'] = true_negatives + false_negatives + false_positives + true_positives
         stats['accuracy'] = 1.0*(true_positives + true_negatives)/stats['total_predictions']
@@ -123,6 +135,29 @@ CLF_PICKLE_FILENAME = "my_classifier.pkl"
 DATASET_PICKLE_FILENAME = "my_dataset.pkl"
 FEATURE_LIST_FILENAME = "my_feature_list.pkl"
 
+CLASSIFIER_STATS_FILE = "classifier_stats.pkl"
+
+def load_saved_scores():
+    if os.path.isfile(CLASSIFIER_STATS_FILE):
+      with open(CLASSIFIER_STATS_FILE) as f:
+        return pickle.load(f)
+    else:
+      return {}
+      
+def score_classifiers(dataset, features_list, saved_scores=None):
+    saved_scores = saved_scores or {}
+    clf_scores = {}
+    for clf, clf_kwargs in TEST_CLASSIFIERS.iteritems():
+        clf_identifier = str(clf)
+        
+        # skip a classifier if we've done it before with the same kwargs
+        if saved_scores.get(clf_identifier, {}).get('clf_kwargs') == clf_kwargs:
+            print('Already found stats for "%s"' % clf_identifier)
+            clf_scores[clf_identifier] = saved_scores[clf_identifier]
+        else:
+            print('Computing stats for "%s"' % clf_identifier)
+            clf_scores[str(clf)] = get_classifier_scores(clf, clf_kwargs, dataset, features_list)
+    return clf_scores
 
 def main():
     ### Task 1: Select what features you'll use.
@@ -155,25 +190,34 @@ def main():
     ### you'll need to use Pipelines. For more info:
     ### http://scikit-learn.org/stable/modules/pipeline.html
 
-    # calculate the scores of each classifier
-    clf_scores = []
-    for clf, kwargs in TEST_CLASSIFIERS.iteritems():
-        print('Trying classifier: %s' % str(clf))
-        clf_scores.append(get_classifier_scores(clf(**kwargs), my_dataset, features_list))
+    # Load previously saved stats to save time if we don't have to 
+    # recompute some of them
+    clf_scores = load_saved_scores()
+    # pprint(clf_scores)
+      
+    # gather the stats for each classifier if it's arguments have changed
+    clf_scores = score_classifiers(my_dataset, features_list, saved_scores=clf_scores)
+
+    with open(CLASSIFIER_STATS_FILE, 'w') as f:
+      pickle.dump(clf_scores, f)
+
+    pprint(clf_scores.values())
+    best_clf = max([s for s in clf_scores.values() if 'f1' in s], key=itemgetter('f1'))
+    pprint(['best classifier: ', best_clf])
+
 
     ### Task 5: Tune your classifier to achieve better than .3 precision and recall 
     ### using our testing script.
     ### Because of the small size of the dataset, the script uses stratified
     ### shuffle split cross validation. For more info: 
     ### http://scikit-learn.org/stable/modules/generated/sklearn.cross_validation.StratifiedShuffleSplit.html
-
-    pprint(clf_scores)
-    test_classifier(clf, my_dataset, features_list)
+    # pprint(clf_scores.values(), indent=2)
+    # test_classifier(clf, my_dataset, features_list)
 
     ### Dump your classifier, dataset, and features_list so 
     ### anyone can run/check your results.
 
-    dump_classifier_and_data(clf, my_dataset, features_list)
+    dump_classifier_and_data(best_clf, my_dataset, features_list)
 
 if __name__ == '__main__':
     main()
