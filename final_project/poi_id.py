@@ -3,6 +3,7 @@
 import sys
 import pickle
 import os.path
+import json
 from pprint import pprint
 sys.path.append("../tools/")
 
@@ -27,7 +28,8 @@ from sklearn.ensemble import AdaBoostClassifier, \
 
 # Recursive Feature Elimination with Cross Validation
 from sklearn.feature_selection import RFECV # TODO: use this
-
+from sklearn.svm import SVR
+from sklearn.decomposition import TruncatedSVD
 
 TEST_CLASSIFIERS = {
     GaussianNB: {},
@@ -45,11 +47,12 @@ TEST_CLASSIFIERS = {
 }
 
 available_features = [
+    'poi',
     'bonus',
     'deferral_payments',
     'deferred_income',
     'director_fees',
-    'email_address',
+    # 'email_address',
     'exercised_stock_options',
     'expenses',
     'from_messages',
@@ -58,7 +61,6 @@ available_features = [
     'loan_advances',
     'long_term_incentive',
     'other',
-    'poi',
     'restricted_stock',
     'restricted_stock_deferred',
     'salary',
@@ -72,63 +74,94 @@ available_features = [
 def get_classifier_scores(clf_class, clf_kwargs, dataset, feature_list, folds = 1000):
     clf = clf_class(**clf_kwargs)
     data = featureFormat(dataset, feature_list, sort_keys = True)
-    labels, features = targetFeatureSplit(data)
-    cv = StratifiedShuffleSplit(labels, folds, random_state = 42)
-    true_negatives = 0
-    false_negatives = 0
-    true_positives = 0
-    false_positives = 0
     
-    stats = {
+    
+    labels, features = targetFeatureSplit(data)
+    
+    clf_stats = {
       'classifier': clf_class,
       'clf_kwargs': clf_kwargs,
+      'features': feature_list,
+      'stats_by_n_features': {}
     }
     
-    for train_idx, test_idx in cv: 
-        features_train = []
-        features_test  = []
-        labels_train   = []
-        labels_test    = []
-        for ii in train_idx:
-            features_train.append( features[ii] )
-            labels_train.append( labels[ii] )
-        for jj in test_idx:
-            features_test.append( features[jj] )
-            labels_test.append( labels[jj] )
-        
-        ### fit the classifier using training set, and test on test set
-        
-        try:
-            clf.fit(features_train, labels_train)
-            predictions = clf.predict(features_test)
-        except Exception as e:
-            stats['exception'] = e
-            return stats
-            
-        for prediction, truth in zip(predictions, labels_test):
-            if prediction == 0 and truth == 0:
-                true_negatives += 1
-            elif prediction == 0 and truth == 1:
-                false_negatives += 1
-            elif prediction == 1 and truth == 0:
-                false_positives += 1
-            else:
-                true_positives += 1
-                
-    
-    try:
-        stats['total_predictions'] = true_negatives + false_negatives + false_positives + true_positives
-        stats['accuracy'] = 1.0*(true_positives + true_negatives)/stats['total_predictions']
-        stats['precision'] = 1.0*true_positives/(true_positives+false_positives)
-        stats['recall'] = 1.0*true_positives/(true_positives+false_negatives)
-        stats['f1'] = 2.0 * true_positives/(2*true_positives + false_positives+false_negatives)
-        stats['f2'] = (1+2.0*2.0) * stats['precision']*stats['recall'] \
-                      / (4*stats['precision'] + stats['recall'])
-    except:
-        print "Got a divide by zero when trying out:", clf
-        for stat in ['true_negatives', 'false_negatives', 'true_positives', 'false_positives']:
-            print('%s: %s' % (stat, eval(stat)))
-    return stats
+    num_features = len(features[0])
+    while True:
+      
+      print('shape: %s, %s' % (len(features), len(features[0])))
+      # don't reduce dimensionality the first time (try with all features)
+      if num_features < len(features[0]):
+        svd = TruncatedSVD(n_components=num_features)
+        features = svd.fit_transform(features)
+      # estimator = SVR(kernel='linear')
+      # selector = RFECV(estimator, step=1)
+      # features = selector.fit_transform(features, labels)
+      # print('shape: %s, %s' % (len(features), len(features[0])))
+      
+      
+      cv = StratifiedShuffleSplit(labels, folds, random_state = 42)
+      true_negatives = 0
+      false_negatives = 0
+      true_positives = 0
+      false_positives = 0
+      
+      stats = {
+        'classifier': clf_class,
+        'clf_kwargs': clf_kwargs,
+        'n_features': num_features
+      }
+      
+      for train_idx, test_idx in cv: 
+          features_train = []
+          features_test  = []
+          labels_train   = []
+          labels_test    = []
+          for ii in train_idx:
+              features_train.append( features[ii] )
+              labels_train.append( labels[ii] )
+          for jj in test_idx:
+              features_test.append( features[jj] )
+              labels_test.append( labels[jj] )
+          
+          ### fit the classifier using training set, and test on test set
+          
+          try:
+              clf.fit(features_train, labels_train)
+              predictions = clf.predict(features_test)
+          except Exception as e:
+              stats['exception'] = e
+              break
+              
+          for prediction, truth in zip(predictions, labels_test):
+              if prediction == 0 and truth == 0:
+                  true_negatives += 1
+              elif prediction == 0 and truth == 1:
+                  false_negatives += 1
+              elif prediction == 1 and truth == 0:
+                  false_positives += 1
+              else:
+                  true_positives += 1
+                  
+      
+      try:
+          stats['total_predictions'] = true_negatives + false_negatives + false_positives + true_positives
+          stats['accuracy'] = 1.0*(true_positives + true_negatives)/stats['total_predictions']
+          stats['precision'] = 1.0*true_positives/(true_positives+false_positives)
+          stats['recall'] = 1.0*true_positives/(true_positives+false_negatives)
+          stats['f1'] = 2.0 * true_positives/(2*true_positives + false_positives+false_negatives)
+          stats['f2'] = (1+2.0*2.0) * stats['precision']*stats['recall'] \
+                        / (4*stats['precision'] + stats['recall'])
+      except:
+          print "Got a divide by zero when trying out:", clf
+          for stat in ['true_negatives', 'false_negatives', 'true_positives', 'false_positives']:
+              print('%s: %s' % (stat, eval(stat)))
+      
+      clf_stats['stats_by_n_features'][num_features] = stats
+      
+      num_features -= 1
+      if num_features < 3:
+        break
+    return clf_stats
     
 
 CLF_PICKLE_FILENAME = "my_classifier.pkl"
@@ -151,7 +184,9 @@ def score_classifiers(dataset, features_list, saved_scores=None):
         clf_identifier = str(clf)
         
         # skip a classifier if we've done it before with the same kwargs
-        if saved_scores.get(clf_identifier, {}).get('clf_kwargs') == clf_kwargs:
+        saved_clf_stats = saved_scores.get(clf_identifier, {})
+        if saved_clf_stats.get('clf_kwargs') == clf_kwargs \
+              and saved_clf_stats.get('features', set()) == set(features_list):
             print('Already found stats for "%s"' % clf_identifier)
             clf_scores[clf_identifier] = saved_scores[clf_identifier]
         else:
@@ -163,8 +198,9 @@ def main():
     ### Task 1: Select what features you'll use.
     ### features_list is a list of strings, each of which is a feature name.
     ### The first feature must be "poi".
-    features_list = ['poi','salary'] # You will need to use more features
-
+    # features_list = ['poi','salary', 'from_poi_to_this_person', 'exercised_stock_options', 'expenses'] # You will need to use more features
+    features_list = available_features
+    
     ### Load the dictionary containing the dataset
     data_dict = pickle.load(open("final_project_dataset.pkl", "r") )
 
@@ -182,7 +218,7 @@ def main():
     # pprint(data)
     labels, features = targetFeatureSplit(data)
     # pprint(labels)
-    pprint(features)
+    # pprint(features)
 
     ### Task 4: Try a varity of classifiers
     ### Please name your classifier clf for easy export below.
@@ -202,9 +238,23 @@ def main():
       pickle.dump(clf_scores, f)
 
     pprint(clf_scores.values())
-    best_clf = max([s for s in clf_scores.values() if 'f1' in s], key=itemgetter('f1'))
-    pprint(['best classifier: ', best_clf])
+    
+    best_clf_stats = {}
+    for clf_str, clf_stats in clf_scores.items():
+      for num_features, inner_stats in clf_stats.get('stats_by_n_features', {}).items():
+        if inner_stats.get('f2', 0) >= best_clf_stats.get('f2', 0):
+          best_clf_stats = inner_stats
+    
+    # best_clf = max([s for s in clf_scores.values() if 'f1' in s], key=itemgetter('f1'))
+    pprint(['best classifier: ', best_clf_stats])
 
+    # find classifiers that had >= 0.3 precision/recall
+    balanced_clf_stats = []
+    for clf_str, clf_stats in clf_scores.items():
+      for num_features, inner_stats in clf_stats.get('stats_by_n_features', {}).items():
+        if inner_stats.get('precision', 0) >= 0.3 and inner_stats.get('recall', 0) >= 0.3:
+          balanced_clf_stats.append(inner_stats)
+    pprint(['balanced classifiers/datasets: ', balanced_clf_stats])
 
     ### Task 5: Tune your classifier to achieve better than .3 precision and recall 
     ### using our testing script.
@@ -216,7 +266,9 @@ def main():
 
     ### Dump your classifier, dataset, and features_list so 
     ### anyone can run/check your results.
-
+    
+    with open('my_dataset.json', 'w') as f:
+        f.write(json.dumps(my_dataset, indent=2))
     dump_classifier_and_data(best_clf, my_dataset, features_list)
 
 if __name__ == '__main__':
