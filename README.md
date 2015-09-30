@@ -13,3 +13,4 @@ ud120-projects
 Starter project code for students taking Udacity ud120
 
 My mostly complete, but quite messy solution to the final project can be found in final_project/poi_id.py
+My explanation of my approach and summary of results can be found in final_project/README.md
